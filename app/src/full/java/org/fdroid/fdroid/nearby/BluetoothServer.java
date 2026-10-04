@@ -96,7 +96,7 @@ public class BluetoothServer extends Thread {
         }
     }
 
-    private static class ClientConnection extends Thread {
+    static class ClientConnection extends Thread {
 
         private final BluetoothSocket socket;
         private final File webRoot;
@@ -186,7 +186,7 @@ public class BluetoothServer extends Thread {
 
         }
 
-        private Response respond(Map<String, String> headers, String uri) {
+        Response respond(Map<String, String> headers, String uri) {
             // Remove URL arguments
             uri = uri.trim().replace(File.separatorChar, '/');
             if (uri.indexOf('?') >= 0) {
@@ -194,12 +194,27 @@ public class BluetoothServer extends Thread {
             }
 
             // Prohibit getting out of current directory
-            if (uri.contains("../")) {
+            if (uri.contains("../") || uri.contains("/..") || uri.equals("..")) {
                 return createResponse(NanoHTTPD.Response.Status.FORBIDDEN, NanoHTTPD.MIME_PLAINTEXT,
                         "FORBIDDEN: Won't serve ../ for security reasons.");
             }
 
             File f = new File(webRoot, uri);
+            try {
+                String canonicalWebRoot = webRoot.getCanonicalPath();
+                if (!canonicalWebRoot.endsWith(File.separator)) {
+                    canonicalWebRoot += File.separator;
+                }
+                String canonicalFile = f.getCanonicalPath();
+                if (!canonicalFile.equals(webRoot.getCanonicalPath()) && !canonicalFile.startsWith(canonicalWebRoot)) {
+                    return createResponse(NanoHTTPD.Response.Status.FORBIDDEN, NanoHTTPD.MIME_PLAINTEXT,
+                            "FORBIDDEN: Won't serve files outside of web root.");
+                }
+            } catch (IOException e) {
+                return createResponse(NanoHTTPD.Response.Status.FORBIDDEN, NanoHTTPD.MIME_PLAINTEXT,
+                        "FORBIDDEN: Path error.");
+            }
+
             if (!f.exists()) {
                 return createResponse(NanoHTTPD.Response.Status.NOT_FOUND, NanoHTTPD.MIME_PLAINTEXT,
                         "Error 404, file not found.");
