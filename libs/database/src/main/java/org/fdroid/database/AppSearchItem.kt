@@ -40,18 +40,26 @@ internal constructor(
 
   init {
     val info = matchInfo.toIntArray()
-    val numPhrases = info[0]
-    val numColumns = info[1]
     val scoreMap = mutableMapOf<Int, Int>()
-    for (phrase in 0 until numPhrases) {
-      val offset = 2 + phrase * numColumns * 3
-      // start with 1 below, because we don't care about repoId column
-      for (column in 1 until numColumns) {
-        val numHitsInRow = info[offset + 3 * column]
-        // increase score if this column had a hit
-        if (numHitsInRow > 0) {
-          // each hit in a column only contributes to the score once
-          scoreMap.getOrPut(column) { weights[column] ?: error("No weight for column $column") }
+    if (info.size >= 2) {
+      val numPhrases = info[0]
+      val numColumns = info[1]
+      for (phrase in 0 until numPhrases) {
+        val offset = 2 + phrase * numColumns * 3
+        // start with 1 below, because we don't care about repoId column
+        for (column in 1 until numColumns) {
+          val idx = offset + 3 * column
+          if (idx < info.size) {
+            val numHitsInRow = info[idx]
+            // increase score if this column had a hit
+            if (numHitsInRow > 0) {
+              // each hit in a column only contributes to the score once
+              val weight = weights[column] ?: 0
+              if (weight > 0) {
+                scoreMap.getOrPut(column) { weight }
+              }
+            }
+          }
         }
       }
     }
@@ -61,12 +69,11 @@ internal constructor(
   }
 
   private fun ByteArray.toIntArray(skipSize: Int = 4): IntArray {
-    val intArray = IntArray(size / skipSize)
-    // go through each 4 bytes to turn them into integers
-    (indices step skipSize).forEachIndexed { intIndex, byteIndex ->
-      // we are cutting the first two bytes off, because we don't want to deal with UInt
-      // and expected integers are small enough
-      intArray[intIndex] = ByteBuffer.wrap(this, byteIndex, 4).order(ByteOrder.LITTLE_ENDIAN).int
+    val numInts = size / skipSize
+    val intArray = IntArray(numInts)
+    val buffer = ByteBuffer.wrap(this).order(ByteOrder.LITTLE_ENDIAN)
+    for (i in 0 until numInts) {
+      intArray[i] = buffer.getInt(i * skipSize)
     }
     return intArray
   }
