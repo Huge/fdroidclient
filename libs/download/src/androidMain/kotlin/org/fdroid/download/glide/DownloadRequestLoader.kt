@@ -43,5 +43,7 @@ internal fun DownloadRequest.getObjectKey(): ObjectKey {
 }
 
 internal fun DownloadRequest.getKey(): String {
-  return indexFile.sha256 ?: (mirrors[0].baseUrl + indexFile.name)
+  return indexFile.sha256
+    ?: mirrors.firstOrNull()?.let { it.baseUrl + indexFile.name }
+    ?: indexFile.name
 }
