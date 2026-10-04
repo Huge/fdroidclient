@@ -43,4 +43,27 @@ internal class IndexConverterTest {
 
     assertEquals(expectedIndex.sorted(), v2.sorted())
   }
+
+  @Test
+  fun testAppWithEmptyVersionsList() {
+    val indexV1 =
+      org.fdroid.index.v1.IndexV1(
+        repo =
+          org.fdroid.index.v1.RepoV1(
+            timestamp = 42L,
+            version = 42,
+            name = "Test Repo",
+            icon = "icon.png",
+            address = "https://example.com",
+            description = "Test description",
+          ),
+        apps =
+          listOf(org.fdroid.index.v1.AppV1(packageName = "org.example.app", license = "GPL-3.0")),
+        packages = mapOf("org.example.app" to emptyList()),
+      )
+
+    val v2 = IndexConverter().toIndexV2(indexV1)
+    val pkg = v2.packages["org.example.app"]
+    assertEquals(emptyMap(), pkg?.versions)
+  }
 }

@@ -20,7 +20,7 @@ public class IndexConverter(private val defaultLocale: String = DEFAULT_LOCALE) 
     val packagesV2 = HashMap<String, PackageV2>(v1.apps.size)
     v1.apps.forEach { app ->
       val versions = v1.packages[app.packageName]
-      val preferredSigner = versions?.get(0)?.signer
+      val preferredSigner = versions?.firstOrNull()?.signer
       val appAntiFeatures: Map<String, LocalizedTextV2> =
         app.antiFeatures.associateWith { emptyMap() }
       val whatsNew: LocalizedTextV2? = app.localized?.mapValuesNotNull { it.value.whatsNew }
